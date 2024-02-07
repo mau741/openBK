@@ -114,12 +114,20 @@ void DRV_DDP_CreateSocket_Receive() {
 }
 void DDP_Parse(byte *data, int len) {
 	if(len > 12) {
-		byte r, g, b;
+		byte r, g, b, w, type;
+		type = data[2];
 		r = data[10];
 		g = data[11];
 		b = data[12];
+		w = data[13];
 
-		LED_SetFinalRGB(r,g,b);
+	        //addLogAdv(LOG_INFO, LOG_FEATURE_DDP, "DDP data: type=%u r=%u g=%u b=%u w=%u", type, r, g, b, w);
+		if(type == 0x1B) {
+		    // TODO: support W
+		    LED_SetFinalRGB(r,g,b);
+		} else {
+		    LED_SetFinalRGB(r,g,b);
+		}
 	}
 }
 void DRV_DDP_RunFrame() {
