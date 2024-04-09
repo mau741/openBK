@@ -345,3 +345,38 @@ WIFI_RSSI_LEVEL wifi_rssi_scale(int8_t rssi_value)
     return retVal;
 }
 
+// functions for handling device time even without NTP driver present
+// using "g_epochOnStartup" and "g_timeOffsetSeconds" if NTP not present (or not synced)
+
+#include "driver/drv_deviceclock.h"
+
+
+TickType_t lastTick=0;
+uint8_t timer_rollovers=0; // I don't expect uptime > 35 years ...
+
+
+
+// g_secondsElapsed is drifting of after some time (for me it was ~ 1 to 2 minutes (!) a day)
+// when using rtos ticks, it was reduced to 1 to 2 seconds(!) a day
+// if we want to use this for emulating an RTC, we should get the time as good as possible 
+
+uint32_t getSecondsElapsed(){
+ TickType_t actTick=xTaskGetTickCount();
+ // to make this work, getSecondsElapsed() must be called once before rollover, which is 
+ // no problem for the usual choice of TickType_t = uint32_t:
+ // 	rollover will take place after 4294967295 ms (almost 50 days)
+ // but it might be a more of challenge for uint16_t its with only 65535 ms (one Minute and 5 seconds)!! 
+ if (actTick < lastTick ) timer_rollovers++;
+ lastTick = actTick;
+ // 
+ // version 1 :
+ // use the time also to adjust g_secondsElapsed 
+ g_secondsElapsed = (uint32_t)(((uint64_t) timer_rollovers << 32 | actTick) / 1000 );
+ return  g_secondsElapsed;
+ // 
+ // possible version 2 :
+ // without adjusting g_secondsElapsed :
+// return (uint32_t)(((uint64_t) timer_rollovers << 32 | actTick) / 1000 );
+}
+
+

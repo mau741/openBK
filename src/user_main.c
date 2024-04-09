@@ -36,6 +36,7 @@
 
 
 #include "driver/drv_ntp.h"
+#include "driver/drv_deviceclock.h"
 #include "driver/drv_ssdp.h"
 #include "driver/drv_uart.h"
 
@@ -57,6 +58,7 @@ void bg_register_irda_check_func(FUNCPTR func);
 
 
 int g_secondsElapsed = 0;
+extern int g_DSToffset;
 // open access point after this number of seconds
 int g_openAP = 0;
 // connect to wifi after this number of seconds
@@ -463,6 +465,7 @@ void Main_OnEverySecond()
 	g_bHasWiFiConnected = 1;
 #endif
 
+Clock_OnEverySecond();
 	// display temperature - thanks to giedriuslt
 // only in Normal mode, and if boot is not failing
 	if (!bSafeMode && g_bootFailures <= 1)
@@ -626,8 +629,17 @@ void Main_OnEverySecond()
 		//int mqtt_max, mqtt_cur, mqtt_mem;
 		//MQTT_GetStats(&mqtt_cur, &mqtt_max, &mqtt_mem);
 		//ADDLOGF_INFO("mqtt req %i/%i, free mem %i\n", mqtt_cur,mqtt_max,mqtt_mem);
-		ADDLOGF_INFO("%sTime %i, idle %i/s, free %d, MQTT %i(%i), bWifi %i, secondsWithNoPing %i, socks %i/%i %s\n",
-			safe, g_secondsElapsed, idleCount, xPortGetFreeHeapSize(), bMQTTconnected, MQTT_GetConnectEvents(),
+		char timestring[50];
+		if (IsTimeSynced() == true) {
+			time_t localTime = (time_t)GetCurrentTime();
+			strftime(timestring, sizeof(timestring), "Date: %Y-%m-%dT%H:%M:%S", gmtime(&localTime));
+		}
+		else {
+			sprintf(timestring, "Time %i", g_secondsElapsed);
+		}
+		
+		ADDLOGF_INFO("%s %s, idle %i/s, free %d, MQTT %i(%i), bWifi %i, secondsWithNoPing %i, socks %i/%i %s\n",
+			safe, timestring, idleCount, xPortGetFreeHeapSize(), bMQTTconnected, MQTT_GetConnectEvents(),
 			g_bHasWiFiConnected, g_timeSinceLastPingReply, LWIP_GetActiveSockets(), LWIP_GetMaxSockets(),
 			g_powersave ? "POWERSAVE" : "");
 		// reset so it's a per-second counter.
@@ -641,12 +653,25 @@ void Main_OnEverySecond()
 #endif
 
 
-	// print network info
+	// every 10 seconds ...
 	if (!(g_secondsElapsed % 10))
 	{
+		// ... print network info ...
 		HAL_PrintNetworkInfo();
-
+		// adjust g_secondsElapsed to rtos ticks to be more reliable
+		getSecondsElapsed(); // getSecondsElapsed() will set g_secondsElapsed to a tick based counter
 	}
+
+		// since GetCurrentTimeWithoutOffset() is 0 if time is not set, we don't need to test for "IsTimeSynced()" in advance 
+		// (0 will never be > g_next_dst_change, even if g_next_dst_change was never set and hence is also 0
+		
+//ADDLOGF_INFO("DST: Next DST switch at epoch %u -- g_DSToffset is %i ! \n",g_next_dst_change, g_DSToffset);				
+		if  ( GetCurrentTimeWithoutOffset() > g_next_dst_change ){ // since GetCurrentTimeWithoutOffset() is 0 if time is not set, we don't need to test if time is set before
+			if (testNsetDST(GetCurrentTimeWithoutOffset())) ADDLOGF_INFO("DST switch from normal time to DST at epoch %u -- next switch at %u!! \n", GetCurrentTimeWithoutOffset(), g_next_dst_change);
+			else  ADDLOGF_INFO("DST switch back from DST at epoch %u -- next switch at %u!! \n", GetCurrentTimeWithoutOffset(),g_next_dst_change);
+		}
+
+
 	// IR TESTING ONLY!!!!
 #ifdef PLATFORM_BK7231T
 	//DRV_IR_Print();

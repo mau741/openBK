@@ -16,8 +16,9 @@
 #include "hass.h"
 #include "../cJSON/cJSON.h"
 #include <time.h>
-#include "../driver/drv_ntp.h"
+#include "../driver/drv_deviceclock.h"
 #include "../driver/drv_local.h"
+#include "../driver/drv_deviceclock.h"
 
 static char SUBMIT_AND_END_FORM[] = "<br><input type=\"submit\" value=\"Submit\"></form>";
 
@@ -150,6 +151,31 @@ int http_fn_testmsg(http_request_t* request) {
 	return 0;
 
 }
+
+// poor mans NTP
+int http_fn_pmntp(http_request_t* request) {
+	char tmpA[128];
+	uint32_t actepoch=0;
+	// javascripts "getTime()" should return time since 01.01.1970 (UTC)
+	// we want local time, so we need to add the UTC offset (if there is one)
+	if (http_getArg(request->url, "EPOCH", tmpA, sizeof(tmpA))) {
+		actepoch = (uint32_t)strtoul(tmpA,0,10);
+		setDeviceTime(actepoch);
+addLogAdv(LOG_INFO, LOG_FEATURE_HTTP,"PoormMansNTP - set g_epochOnStartup to %u -- got actepoch=%u secondsElapsed=%u!! \n",g_epochOnStartup,actepoch, g_secondsElapsed);	
+	}
+	if (http_getArg(request->url, "OFFSET", tmpA, sizeof(tmpA)) && actepoch != 0 ) {
+	// if actual time is during DST period, javascript will return 
+	// an offset including the one additional hour of DST  
+	// if this is the case, set g_DST_offset to 3600 and reduce the 
+	// offset to the offset from timesone (sbtract 3600 seconds)
+		setDeviceTimeOffset(testNsetDST(actepoch)==1 ? atoi(tmpA)-3600 : atoi(tmpA));
+addLogAdv(LOG_INFO, LOG_FEATURE_HTTP,"PoormMansNTP - set g_timeOffsetSeconds to %i (%i) -- got offset=%i -- next switch at %u!! \n",GetTimesZoneOfsSeconds(),g_timeOffsetSeconds,atoi(tmpA),g_next_dst_change);	
+	}
+	poststr(request, "HTTP/1.1 302 OK\nLocation: /index\nConnection: close\n\n");
+	poststr(request, NULL);
+	return 0;
+}
+
 
 // bit mask telling which channels are hidden from HTTP
 // If given bit is set, then given channel is hidden
@@ -773,6 +799,7 @@ int http_fn_index(http_request_t* request) {
 	{
 		hprintf255(request, "<h5>Wifi RSSI: %s (%idBm)</h5>", str_rssi[wifi_rssi_scale(HAL_GetWifiStrength())], HAL_GetWifiStrength());
 	}
+	hprintf255(request, "<input style=\"display:none;\" id=\"DATA\" data-time=\"%u\" data-online=\"%i d, %02i h, %02i m, %02i s\">", IsTimeSynced()? GetCurrentTimeWithoutOffset() : 1, (int)(g_secondsElapsed/86400), (int)((g_secondsElapsed%86400)/3600), (int)((g_secondsElapsed%3600)/60), g_secondsElapsed%60) ;
 #if PLATFORM_BEKEN
 	/*
 typedef enum {
@@ -916,6 +943,7 @@ typedef enum {
 		}
 		poststr(request, "<form action=\"/app\" target=\"_blank\"><input type=\"submit\" value=\"Launch Web Application\"></form> ");
 		poststr(request, "<form action=\"about\"><input type=\"submit\" value=\"About\"/></form>");
+		poststr(request, "<input type=\"submit\" value=\"Poor mans NTP\" onclick=\"location.href = PoorMansNTP() ;\" > ");
 
 		poststr(request, htmlFooterRefreshLink);
 		http_html_end(request);
