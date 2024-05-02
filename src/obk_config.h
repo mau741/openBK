@@ -19,6 +19,11 @@
 
 #define OBK_DISABLE_ALL_DRIVERS       1
 
+// test for local clock
+#define ENABLE_LOCAL_CLOCK_ADVANCED	0
+#define ENABLE_LOCAL_CLOCK		0
+
+
 #elif PLATFORM_W600
 
 // Some limited drivers are supported on W600, OBK_DISABLE_ALL_DRIVERS is not defined
@@ -27,9 +32,17 @@
 #define ENABLE_DRIVER_BL0937    1
 #define ENABLE_DRIVER_DHT		1
 
+// test for local clock
+#define ENABLE_LOCAL_CLOCK_ADVANCED	0
+#define ENABLE_LOCAL_CLOCK		0
+
+
 #elif PLATFORM_W800
 
 #define OBK_DISABLE_ALL_DRIVERS 1
+// test for local clock
+#define ENABLE_LOCAL_CLOCK_ADVANCED	0
+#define ENABLE_LOCAL_CLOCK		0
 
 #elif WINDOWS
 
@@ -64,6 +77,10 @@
 #define	ENABLE_DRIVER_SM16703P	1
 #define ENABLE_DRIVER_PIXELANIM	1
 
+// test for local clock
+#define ENABLE_LOCAL_CLOCK_ADVANCED	0
+#define ENABLE_LOCAL_CLOCK		0
+
 #elif PLATFORM_BL602
 
 // I have enabled drivers on BL602
@@ -77,6 +94,11 @@
 #define ENABLE_DRIVER_WEMO		1
 #define ENABLE_DRIVER_FREEZE	0
 #define ENABLE_DRIVER_DHT		1
+
+// test for local clock
+#define ENABLE_LOCAL_CLOCK_ADVANCED	0
+#define ENABLE_LOCAL_CLOCK		0
+
 
 #elif PLATFORM_BEKEN
 
@@ -116,6 +138,10 @@
 #define ENABLE_DRIVER_DHT		1
 //#define ENABLE_DRIVER_AHT2X 1
 
+// test for local clock
+#define ENABLE_LOCAL_CLOCK_ADVANCED	0
+#define ENABLE_LOCAL_CLOCK		0
+
 #elif PLATFORM_LN882H
 
 //#define OBK_DISABLE_ALL_DRIVERS       1
@@ -126,6 +152,8 @@
 #define ENABLE_DRIVER_WEMO		1
 #define ENABLE_DRIVER_HUE		1
 #define ENABLE_DRIVER_DHT		1
+#define ENABLE_LOCAL_CLOCK_ADVANCED	0
+#define ENABLE_LOCAL_CLOCK		0
 
 #else
 
